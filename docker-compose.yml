@@ -35,6 +35,22 @@ services:
       - "${INDEX_INPUT_DIR:-./input}:/input"
       - blacklab-data:/data
 
+  customindexer:
+      image: instituutnederlandsetaal/blacklab:${IMAGE_VERSION}
+      profiles:
+          - tools
+      build:
+          context: .
+          dockerfile: docker/Dockerfile
+      command: >-
+          /bin/bash -c 
+          "cd /usr/local/lib/blacklab-tools &&
+          java -cp '*' nl.inl.blacklab.tools.IndexTool create /data/index/${INDEX_NAME} /input ${INDEXER_CLASS}"
+      volumes:
+          - "${BLACKLAB_FORMATS_DIR:-./formats}:/etc/blacklab/formats"
+          - "${INDEX_INPUT_DIR:-./input}:/input"
+          - blacklab-data:/data
+
   # Indexes the test data and starts the server
   # (remote debugging is always enabled)
   testserver:

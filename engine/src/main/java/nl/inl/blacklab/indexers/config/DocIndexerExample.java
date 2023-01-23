@@ -1,16 +1,5 @@
 package nl.inl.blacklab.indexers.config;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-
 import nl.inl.blacklab.analysis.PayloadUtils;
 import nl.inl.blacklab.exceptions.MalformedInputFile;
 import nl.inl.blacklab.exceptions.PluginException;
@@ -22,81 +11,95 @@ import nl.inl.blacklab.search.BlackLabIndexWriter;
 import nl.inl.blacklab.search.indexmetadata.AnnotatedFieldNameUtil;
 import nl.inl.blacklab.search.indexmetadata.FieldType;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * An educational DocIndexer to learn how to implement your own.
- *
  * If your input data cannot easily be described using the standard
  * .blf.yaml configuration files, you might need to implement your own
  * DocIndexer class. This shows how to do that.
- *
  * This example is designed to explain the most basic building blocks of
  * indexing data in BlackLab, not to be practical or robust. It covers only
  * the most important features. If something is unclear, please ask.
- *
  * The input files that this DocIndexer can process are a sort of "assembly
  * language" for BlackLab indexing. They contain one instruction per line,
  * each instruction being an uppercase word followed by 0 or more parameter(s),
  * whitespace-separated. Anything after a hash symbol is ignored.
- *
- * Below is a small example. For a larger excample, see example/example.txt in
+ * Below is a small example. For a larger example, see example/example.txt in
  * the resources dir.
- *
  * <code>
  * # Add document
  * DOC_START                     # begin a new document
- *   # Add document-level metadata
- *   METADATA author Pete Puck
- *   METADATA title This is a test.
- *
- *   # Annotated field: contents
- *   FIELD_START contents
- *     VAL word The
- *     VAL lemma the
- *     ADVANCE 1                 # Go to next token position
- *     VAL word quick
- *     VAL lemma quick
- *     ADVANCE 1                 # Go to next token position
- *     VAL word brown
- *     VAL lemma brown
- *     ADVANCE 1                 # Go to next token position
- *     VAL word fox
- *     VAL lemma fox
- *     ADVANCE 1                 # Go to next token position
- *     VAL word jumps
- *     VAL lemma jump
- *
- *     SPAN named-entity 0 4     # Add span according to token positions
- *                               # (note that start is inclusive, end exclusive)
- *   FIELD_END
- *
+ * # Add document-level metadata
+ * METADATA author Pete Puck
+ * METADATA title This is a test.
+ * # Annotated field: contents
+ * FIELD_START contents
+ * VAL word The
+ * VAL lemma the
+ * ADVANCE 1                 # Go to next token position
+ * VAL word quick
+ * VAL lemma quick
+ * ADVANCE 1                 # Go to next token position
+ * VAL word brown
+ * VAL lemma brown
+ * ADVANCE 1                 # Go to next token position
+ * VAL word fox
+ * VAL lemma fox
+ * ADVANCE 1                 # Go to next token position
+ * VAL word jumps
+ * VAL lemma jump
+ * SPAN named-entity 0 4     # Add span according to token positions
+ * # (note that start is inclusive, end exclusive)
+ * FIELD_END
  * DOC_END                       # end document and add to index
  * </code>
- *
  */
 public class DocIndexerExample extends DocIndexerBase {
 
     private BufferedReader reader;
 
-    /** Are we inside a document? */
+    /**
+     * Are we inside a document?
+     */
     private boolean inDoc = false;
 
-    /** Name of annotated field we're processing or null if not in annotated field part */
+    /**
+     * Name of annotated field we're processing or null if not in annotated field part
+     */
     private String currentAnnotatedField = null;
 
-    /** Are we in an annotated field block and have we called beginWord()? Then make sure to call endWord(). */
+    /**
+     * Are we in an annotated field block and have we called beginWord()? Then make sure to call endWord().
+     */
     private boolean inWord = false;
 
 //    /** What position increment should the next annotation values get? */
 //    private int posIncr;
 
-    /** What's the token position of the current token we're parsing?
-     * (only valid if currentAnnotatedField != null) */
+    /**
+     * What's the token position of the current token we're parsing?
+     * (only valid if currentAnnotatedField != null)
+     */
     private int currentTokenPosition;
 
-    /** Character position within the input file. */
+    /**
+     * Character position within the input file.
+     */
     private int characterPosition = 0;
 
-    /** Have we been initialized? */
+    /**
+     * Have we been initialized?
+     */
     private boolean inited = false;
 
     private StringBuilder wholeDocument = new StringBuilder();
@@ -115,23 +118,20 @@ public class DocIndexerExample extends DocIndexerBase {
             inited = true;
 
             // Create our index structure: annotated and metadata fields.
-            createSimpleAnnotatedField("contents", List.of("word", "lemma"));
+            createSimpleAnnotatedField("contents", List.of("word", "lemma", "pos"));
             createMetadataField("pid", FieldType.UNTOKENIZED);
             createMetadataField("author", FieldType.UNTOKENIZED);
             createMetadataField("title", FieldType.TOKENIZED);
         }
     }
 
-
-
     /**
      * Create a simple annotated field.
-     *
      * All of the given annotations get a forward index and will be indexed
      * accent/case insensitively only. A special annotation for spans ("tags")
      * will also be created.
      *
-     * @param name annotated field name
+     * @param name        annotated field name
      * @param annotations annotations on this field
      */
     private void createSimpleAnnotatedField(String name, List<String> annotations) {
@@ -181,7 +181,8 @@ public class DocIndexerExample extends DocIndexerBase {
         while (annotIt.hasNext()) {
             ConfigAnnotation annot = annotIt.next();
             boolean includePayloads = annot.getName() == AnnotatedFieldNameUtil.TAGS_ANNOT_NAME;
-            contents.addAnnotation(annot.getName(), annot.getSensitivitySetting(), includePayloads, annot.createForwardIndex());
+            contents.addAnnotation(annot.getName(), annot.getSensitivitySetting(), includePayloads,
+                    annot.createForwardIndex());
         }
         addAnnotatedField(contents);
     }
@@ -202,8 +203,10 @@ public class DocIndexerExample extends DocIndexerBase {
     @Override
     public void index() throws IOException, MalformedInputFile, PluginException {
         // Execute the commands one line at a time.
+        int line_number = 0;
         while (true) {
             String line = reader.readLine();
+            line_number++;
             if (line == null)
                 break;
 
@@ -216,11 +219,11 @@ public class DocIndexerExample extends DocIndexerBase {
             characterPosition += line.length() + 1;
 
             // Execute the command on this line, if any.
-            processLine(line);
+            processLine(line, line_number);
         }
     }
 
-    private void processLine(String line) {
+    private void processLine(String line, int line_number) {
         // Remove comments and leading/trailing whitespace
         line = line.replaceAll("#.*$", "").trim();
         if (line.isEmpty())
@@ -232,7 +235,12 @@ public class DocIndexerExample extends DocIndexerBase {
         String[] parameters = Arrays.copyOfRange(parts, 1, parts.length);
 
         // Execute command
-        executeCommand(command, parameters);
+        try {
+            executeCommand(command, parameters);
+        } catch (Exception e) {
+            System.err.printf("error in line %s '%s' :%n", line_number, line);
+            throw e;
+        }
     }
 
     private void executeCommand(String command, String[] parameters) {
@@ -260,7 +268,7 @@ public class DocIndexerExample extends DocIndexerBase {
     /**
      * Handle command inside an annotated field block.
      *
-     * @param command command to handle
+     * @param command    command to handle
      * @param parameters parameters
      */
     private void executeValueCommand(String command, String[] parameters) {
@@ -305,7 +313,8 @@ public class DocIndexerExample extends DocIndexerBase {
             for (int i = 3; i < parameters.length; i += 2) {
                 String attName = parameters[i];
                 String attValue = parameters[i + 1];
-                tagsAnnotation().addValueAtPosition(AnnotatedFieldNameUtil.tagAttributeIndexValue(attName, attValue), spanStart, null);
+                tagsAnnotation().addValueAtPosition(AnnotatedFieldNameUtil.tagAttributeIndexValue(attName, attValue),
+                        spanStart, null);
             }
             break;
 
@@ -340,7 +349,7 @@ public class DocIndexerExample extends DocIndexerBase {
     /**
      * Handle command inside a document block.
      *
-     * @param command command to handle
+     * @param command    command to handle
      * @param parameters parameters
      */
     private void executeDocumentCommand(String command, String[] parameters) {
@@ -399,7 +408,6 @@ public class DocIndexerExample extends DocIndexerBase {
 
     /**
      * Sets document to be indexed.
-     *
      * NOTE: there are other setDocument methods that you can override. In some
      * cases, depending on how you process your data, you can optimize indexing by
      * implementing another method. For example, DocIndexerXpath uses the byte array
